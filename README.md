@@ -143,24 +143,31 @@ Here are some examples showing how to use Routine-Handler:
 ```
 const { Routine } = require('routine-handler');
 
-const routine = new Routine((resolve, reject) => {
-  // perform some task
-  if (taskWasSuccessful) {
-    resolve();
-  } else {
-    reject();
-  }
+const evaluator = new Evaluator(() => {
+  // Perform some task and return true if successful, false if not
+  return taskWasSuccessful;
 });
+
+const routine = new Routine(evaluator);
 
 routine.then(() => {
   console.log('Routine was successful');
 }).catch(() => {
   console.log('Routine failed');
-}).evaluate((result) => result === true, () => {
+}).evaluate(() => {
+  // Perform some task and return true if successful, false if not
+  return taskWasSuccessful;
+}, () => {
   console.log('Routine was successful according to the evaluator');
-}).evaluate((result) => result === false, () => {
+}).evaluate(() => {
+  // Perform some task and return true if successful, false if not
+  return !taskWasSuccessful;
+}, () => {
   console.log('Routine failed according to the evaluator');
 });
+
+routine.execute();
+
 
 ```
 
