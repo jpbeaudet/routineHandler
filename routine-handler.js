@@ -73,6 +73,7 @@ class SubRoutine extends Routine {
 class Promise {
   constructor() {
     this.routines = [];
+    this.queue = 'parallel'; // default to parallel execution
   }
 
   addRoutine(routine) {
@@ -85,8 +86,30 @@ class Promise {
     return this;
   }
 
+  addQueue(queue) {
+    this.queue = queue;
+    return this;
+  }
+
   execute() {
-    this.routines.forEach((routine) => routine.execute());
+    if (this.queue === 'parallel') {
+      // Execute all routines in parallel
+      this.routines.forEach((routine) => routine.execute());
+    } else if (this.queue === 'waterfall') {
+      // Execute routines in waterfall mode
+      let i = 0;
+      const executeNextRoutine = () => {
+        if (i < this.routines.length) {
+          const routine = this.routines[i];
+          i++;
+          routine.execute();
+          routine.successHandlers.push(executeNextRoutine);
+        }
+      };
+      executeNextRoutine();
+    } else {
+      throw new Error(`Invalid queue type: ${this.queue}`);
+    }
   }
 }
 
