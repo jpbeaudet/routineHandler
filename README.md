@@ -1,5 +1,5 @@
 # RoutineHandler
-RoutineHandler is a JavaScript library for creating and executing nested routines. It provides a flexible and powerful way to structure your asynchronous code and build complex logic trees.
+This module provides a way to define and execute routines, subroutines and promises. A routine is a piece of code that is executed and can have success and failure handlers attached to it. A subroutine is a routine that is nested inside another routine and can be used to execute code in a specific context. A promise is a collection of routines that can be executed in parallel or in a waterfall fashion.
 
 ## Installation
 To install RoutineHandler, run the following command:
@@ -35,4 +35,40 @@ subRoutine.setParentRoutine(parentRoutine);
 
 parentRoutine.then(() => console.log('parent success!'));
 parentRoutine.catch(() => console.log
+```
+
+Here is an example of how to use the module:
+
+```
+const { Routine, SubRoutine, Promise } = require('routine-handler');
+
+// Define a routine that checks if a number is even
+const isEvenRoutine = new Routine((x) => x % 2 === 0);
+
+// Define a routine that adds two numbers
+const addRoutine = new Routine((x, y) => x + y);
+
+// Define a subroutine that multiplies a number by 2
+const multiplyByTwoRoutine = new SubRoutine((x) => x * 2);
+
+// Add the multiplyByTwoRoutine as a subroutine of the addRoutine
+addRoutine.addSubRoutine(multiplyByTwoRoutine);
+
+// Create a promise and add the isEvenRoutine and addRoutine to it
+const promise = new Promise()
+  .addRoutine(isEvenRoutine)
+  .addRoutine(addRoutine);
+
+// Set the promise to execute routines in a waterfall fashion
+promise.addQueue('waterfall');
+
+// Attach success and failure handlers to the routines
+isEvenRoutine.then(() => console.log('Number is even'))
+  .catch(() => console.log('Number is odd'));
+
+addRoutine.then((result) => console.log(`Result: ${result}`))
+  .catch((error) => console.log(`Error: ${error}`));
+
+// Execute the promise
+promise.execute();
 ```
