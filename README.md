@@ -94,36 +94,30 @@ routine.addSubRoutine(subRoutine);
 ```
 
 ### Creating a Promise
-A promise is an object that can contain one or more routines, and provides a way to execute them all at once. The promise can be configured to execute the routines in parallel or in a waterfall fashion.
+Promises allow you to execute multiple routines in parallel or in a waterfall queue. To create a promise, you can use the Promise class:
 
 ```
-const { Routine } = require('routine-handler');
-
 const promise = new Promise();
 
-// Add some routines to the promise
+```
+
+You can add routines to the promise using the addRoutine method:
+
+```
 promise.addRoutine(routine1);
 promise.addRoutine(routine2);
-promise.addRoutine(routine3);
 
-// Execute the routines in parallel
-promise.execute();
-
-// Execute the routines in a waterfall fashion
-promise.addQueue('waterfall').execute();
 ```
-### Attaching Success and Failure Handlers
-You can attach success and failure handlers to a routine or a promise using the then and catch methods.
+
+By default, routines are executed in parallel. If you want to execute routines in a waterfall queue, you can use the addQueue method:
+
 ```
-const { Routine } = require('routine-handler');
-routine.then(() => {
-  console.log('Routine was successful');
-});
+promise.addQueue('waterfall');
+```
 
-routine.catch(() => {
-  console.log('Routine failed');
-});
+You can attach success and failure handlers to the promise using the then and catch methods:
 
+```
 promise.then(() => {
   console.log('All routines were successful');
 });
@@ -134,38 +128,74 @@ promise.catch(() => {
 
 ```
 
-Here is an example of how to use the module:
+To execute the promise, simply call the execute method:
 
 ```
-const { Routine, SubRoutine, Promise } = require('routine-handler');
-
-// Define a routine that checks if a number is even
-const isEvenRoutine = new Routine((x) => x % 2 === 0);
-
-// Define a routine that adds two numbers
-const addRoutine = new Routine((x, y) => x + y);
-
-// Define a subroutine that multiplies a number by 2
-const multiplyByTwoRoutine = new SubRoutine((x) => x * 2);
-
-// Add the multiplyByTwoRoutine as a subroutine of the addRoutine
-addRoutine.addSubRoutine(multiplyByTwoRoutine);
-
-// Create a promise and add the isEvenRoutine and addRoutine to it
-const promise = new Promise()
-  .addRoutine(isEvenRoutine)
-  .addRoutine(addRoutine);
-
-// Set the promise to execute routines in a waterfall fashion
-promise.addQueue('waterfall');
-
-// Attach success and failure handlers to the routines
-isEvenRoutine.then(() => console.log('Number is even'))
-  .catch(() => console.log('Number is odd'));
-
-addRoutine.then((result) => console.log(`Result: ${result}`))
-  .catch((error) => console.log(`Error: ${error}`));
-
-// Execute the promise
 promise.execute();
+
+```
+
+### Examples
+Here are some examples showing how to use Routine-Handler:
+
+#### Using Evaluators with a Routine
+
+```
+const { Routine } = require('routine-handler');
+
+const routine = new Routine((resolve, reject) => {
+  // perform some task
+  if (taskWasSuccessful) {
+    resolve();
+  } else {
+    reject();
+  }
+});
+
+routine.then(() => {
+  console.log('Routine was successful');
+}).catch(() => {
+  console.log('Routine failed');
+}).evaluate((result) => result === true, () => {
+  console.log('Routine was successful according to the evaluator');
+}).evaluate((result) => result === false, () => {
+  console.log('Routine failed according to the evaluator');
+});
+
+```
+
+#### Using Evaluators with a Promise
+
+```
+const { Routine, Promise } = require('routine-handler');
+
+const routine1 = new Routine((resolve, reject) => {
+  // perform some task
+  if (task1WasSuccessful) {
+    resolve();
+  } else {
+    reject();
+  }
+});
+
+const routine2 = new Routine((resolve, reject) => {
+  // perform some task
+  if (task2WasSuccessful) {
+    resolve();
+  } else {
+    reject();
+  }
+});
+
+const promise = new Promise([routine1, routine2]);
+
+promise.then(() => {
+  console.log('All routines were successful');
+}).catch(() => {
+  console.log('At least one routine failed');
+}).evaluate((results) => results.every(result => result === true), () => {
+  console.log('All routines were successful according to the evaluator');
+}).evaluate((results) => results.some(result => result === false), () => {
+  console.log('At least one routine failed according to the evaluator');
+
 ```
