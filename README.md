@@ -174,35 +174,33 @@ routine.execute();
 #### Using Evaluators with a Promise
 
 ```
-const { Routine, Promise } = require('routine-handler');
+const { Promise } = require('routine-handler');
 
-const routine1 = new Routine((resolve, reject) => {
-  // perform some task
-  if (task1WasSuccessful) {
-    resolve();
-  } else {
-    reject();
-  }
+const evaluator1 = new Evaluator(() => {
+  // Perform some task and return true if successful, false if not
+  return task1WasSuccessful;
 });
 
-const routine2 = new Routine((resolve, reject) => {
-  // perform some task
-  if (task2WasSuccessful) {
-    resolve();
-  } else {
-    reject();
-  }
+const evaluator2 = new Evaluator(() => {
+  // Perform some task and return true if successful, false if not
+  return task2WasSuccessful;
 });
 
-const promise = new Promise([routine1, routine2]);
+const routine1 = new Routine(evaluator1);
+const routine2 = new Routine(evaluator2);
+
+const promise = new Promise();
+promise
+  .addRoutine(routine1)
+  .addRoutine(routine2)
+  .addQueue('parallel');
 
 promise.then(() => {
   console.log('All routines were successful');
 }).catch(() => {
   console.log('At least one routine failed');
-}).evaluate((results) => results.every(result => result === true), () => {
-  console.log('All routines were successful according to the evaluator');
-}).evaluate((results) => results.some(result => result === false), () => {
-  console.log('At least one routine failed according to the evaluator');
+});
+
+promise.execute();
 
 ```
