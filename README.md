@@ -1,5 +1,5 @@
 # RoutineHandler
-This module provides a way to define and execute routines, subroutines and promises. A routine is a piece of code that is executed and can have success and failure handlers attached to it. A subroutine is a routine that is nested inside another routine and can be used to execute code in a specific context. A promise is a collection of routines that can be executed in parallel or in a waterfall fashion.
+Routine-Handler is a JavaScript library for organizing and executing tasks, or "routines," in a specific order. It allows you to attach success and failure handlers to routines, and to specify the conditions for determining whether a routine was successful or failed using evaluators. You can also create subroutines that are linked to a parent routine, and execute routines in parallel or in a waterfall queue.
 
 ## Installation
 To install RoutineHandler, run the following command:
@@ -8,20 +8,32 @@ To install RoutineHandler, run the following command:
 npm install routine-handler
 ```
 
-## Usage
-RoutineHandler consists of three main classes: Routine, SubRoutine, and Promise.
-
-### Creating a Routine
-To create a routine, you need to define an evaluator function that returns a boolean value indicating whether the routine was successful or not. You can then attach success and failure handlers to the routine using the then and catch methods.
+## Basic Usage
+To use Routine-Handler, you'll first need to import the Routine and Evaluator classes:
 
 ```
-const { Routine } = require('routine-handler');
+const { Routine, Evaluator } = require('routine-handler');
+```
 
-const routine = new Routine(() => {
-  // Perform some task here
-  // Return true if the task was successful, false otherwise
+Next, create an instance of the Evaluator class by passing in a function that returns a boolean value indicating whether the routine was successful or not:
+
+```
+const evaluator = new Evaluator(() => {
+  // Perform some task and return true if successful, false if not
+  return taskWasSuccessful;
 });
+```
 
+Then, create an instance of the Routine class by passing in the evaluator you just created:
+
+```
+const routine = new Routine(evaluator);
+
+```
+
+You can now attach success and failure handlers to the routine using the then and catch methods:
+
+```
 routine.then(() => {
   console.log('Routine was successful');
 });
@@ -32,23 +44,52 @@ routine.catch(() => {
 
 ```
 
-### Creating a Subroutine
-A subroutine is a routine that is attached to another routine as a child. When the parent routine is executed, all of its subroutines will also be executed.
+To execute the routine, simply call the execute method:
 
 ```
-const { Routine } = require('routine-handler');
+routine.execute();
 
-const parentRoutine = new Routine(() => {
-  // Perform some task here
-  // Return true if the task was successful, false otherwise
-});
+```
+### Evaluators
+Evaluators allow you to specify the conditions for determining whether a routine was successful or failed. You can create an evaluator by extending the Evaluator class and defining your own evaluate method:
 
-const childRoutine = new SubRoutine(() => {
-  // Perform some task here
-  // Return true if the task was successful, false otherwise
-});
+```
+class MyEvaluator extends Evaluator {
+  evaluate() {
+    // Perform some task and return true if successful, false if not
+    return taskWasSuccessful;
+  }
+}
 
-parentRoutine.addSubRoutine(childRoutine);
+```
+
+You can then use this evaluator when creating a routine:
+
+```
+const evaluator = new MyEvaluator();
+const routine = new Routine(evaluator);
+
+```
+
+### Creating a Subroutine
+Subroutines are routines that are linked to a parent routine. When the parent routine is successful, the subroutines will be executed in the order they were added. To create a subroutine, you can use the SubRoutine class, which extends the Routine class:
+
+```
+const subRoutine = new SubRoutine(evaluator);
+
+```
+
+To link the subroutine to a parent routine, you can use the setParentRoutine method:
+
+```
+subRoutine.setParentRoutine(routine);
+
+```
+
+You can then add the subroutine to the parent routine using the addSubRoutine method:
+
+```
+routine.addSubRoutine(subRoutine);
 
 ```
 
