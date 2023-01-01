@@ -5,14 +5,14 @@ Routine-Handler is a JavaScript library for organizing and executing tasks, or "
 To install RoutineHandler, run the following command:
 
 ```
-npm install routine-handler
+npm install routinejs
 ```
 
 ## Basic Usage
 To use Routine-Handler, you'll first need to import the Routine and Evaluator classes:
 
 ```
-const { Routine, Evaluator } = require('routine-handler');
+const { Routine, Evaluator } = require('routinejs');
 ```
 
 Next, create an instance of the Evaluator class by passing in a function that returns a boolean value indicating whether the routine was successful or not:
@@ -141,7 +141,7 @@ Here are some examples showing how to use Routine-Handler:
 #### Using Evaluators with a Routine
 
 ```
-const { Routine } = require('routine-handler');
+const { Routine } = require('routinejs');
 
 const evaluator = new Evaluator(() => {
   // Perform some task and return true if successful, false if not
@@ -174,7 +174,7 @@ routine.execute();
 #### Using Evaluators with a Promise
 
 ```
-const { Promise } = require('routine-handler');
+const { Promise } = require('routinejs');
 
 const evaluator1 = new Evaluator(() => {
   // Perform some task and return true if successful, false if not
