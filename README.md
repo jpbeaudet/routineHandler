@@ -1,8 +1,8 @@
 # Routinejs
-Routine-Handler is a JavaScript library for organizing and executing tasks, or "routines," in a specific order. It allows you to attach success and failure handlers to routines, and to specify the conditions for determining whether a routine was successful or failed using evaluators. You can also create subroutines that are linked to a parent routine, and execute routines in parallel or in a waterfall queue.
+Routinejs is a JavaScript library for organizing and executing tasks, or "routines," in a specific order. It allows you to attach success and failure handlers to routines, and to specify the conditions for determining whether a routine was successful or failed using evaluators. You can also create subroutines that are linked to a parent routine, and execute routines in parallel or in a waterfall queue.
 
 ## Installation
-To install RoutineHandler, run the following command:
+To install Routinejs, run the following command:
 
 ```
 npm install routinejs
