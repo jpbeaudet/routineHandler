@@ -317,3 +317,14 @@ test('catch should throw an error if called with a non-function', () => {
   const subRoutine = new SubRoutine(mockEvaluator);
   expect(() => subRoutine.catch('not a function')).toThrow('`failureHandler` must be a function');
 });
+// Promise Class
+test('addRoutine should throw an error if called with a non-Routine object', () => {
+const promise = new Promise();
+expect(() => promise.addRoutine({})).toThrow('routine must be an instance of Routine');
+});
+
+test('addQueue should set the queue type to parallel if called with parallel', () => {
+const promise = new Promise();
+promise.addQueue('parallel');
+expect(promise.queue).toBe('parallel');
+});
