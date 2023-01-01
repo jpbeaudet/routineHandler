@@ -199,3 +199,62 @@ test('setParentRoutine should throw an error if called with a non-Routine object
   const subRoutine = new SubRoutine(mockEvaluator);
   expect(() => subRoutine.setParentRoutine({})).toThrow('`routine` must be an instance of `Routine`');
 });
+// Promise Class
+const mockEvaluator = {
+  evaluate: jest.fn(),
+};
+
+const mockSuccessHandler = jest.fn();
+const mockFailureHandler = jest.fn();
+
+beforeEach(() => {
+  // Reset the mock functions before each test
+  mockEvaluator.evaluate.mockReset();
+  mockSuccessHandler.mockReset();
+  mockFailureHandler.mockReset();
+});
+
+test('Promise should execute all routines in parallel if the queue is set to "parallel"', () => {
+  mockEvaluator.evaluate.mockReturnValue(true);
+  const promise = new Promise();
+  const routine1 = new Routine(mockEvaluator);
+  const routine2 = new Routine(mockEvaluator);
+  routine1.then(mockSuccessHandler);
+  routine2.then(mockSuccessHandler);
+  promise.addRoutine(routine1);
+  promise.addRoutine(routine2);
+  promise.addQueue('parallel');
+  promise.execute();
+  expect(mockSuccessHandler).toHaveBeenCalledTimes(2);
+});
+
+test('Promise should execute routines in waterfall mode if the queue is set to "waterfall"', () => {
+  mockEvaluator.evaluate.mockReturnValue(true);
+  const promise = new Promise();
+  const routine1 = new Routine(mockEvaluator);
+  const routine2 = new Routine(mockEvaluator);
+  routine1.then(mockSuccessHandler);
+  routine2.then(mockSuccessHandler);
+  promise.addRoutine(routine1);
+  promise.addRoutine(routine2);
+  promise.addQueue('waterfall');
+  promise.execute();
+  expect(mockSuccessHandler).toHaveBeenCalledTimes(2);
+});
+
+test('Promise should throw an error if the queue is set to an invalid value', () => {
+  const promise = new Promise();
+  expect(() => promise.addQueue('invalid')).toThrow('Invalid queue type: invalid');
+});
+
+test('addRoutine should add a routine to the routines array', () => {
+  const promise = new Promise();
+  const routine = new Routine(mockEvaluator);
+  promise.addRoutine(routine);
+  expect(promise.routines).toEqual([routine]);
+});
+
+test('addRoutine should throw an error if called with a non-Routine object', () => {
+  const promise = new Promise();
+  expect(() => promise.addRoutine({})).toThrow('`routine` must be an instance of `Routine`');
+});
