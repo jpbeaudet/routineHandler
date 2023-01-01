@@ -118,3 +118,84 @@ test('addSubRoutine should throw an error if called with a non-Routine object', 
   const routine = new Routine(mockEvaluator);
   expect(() => routine.addSubRoutine({})).toThrow('`routine` must be an instance of `Routine`');
 });
+// Subroutine Class
+const mockEvaluator = {
+  evaluate: jest.fn(),
+};
+
+const mockSuccessHandler = jest.fn();
+const mockFailureHandler = jest.fn();
+
+beforeEach(() => {
+  // Reset the mock functions before each test
+  mockEvaluator.evaluate.mockReset();
+  mockSuccessHandler.mockReset();
+  mockFailureHandler.mockReset();
+});
+
+test('SubRoutine should call the success handlers if the evaluator function returns true', () => {
+  mockEvaluator.evaluate.mockReturnValue(true);
+  const subRoutine = new SubRoutine(mockEvaluator);
+  subRoutine.then(mockSuccessHandler);
+  subRoutine.execute();
+  expect(mockSuccessHandler).toHaveBeenCalled();
+  expect(mockFailureHandler).not.toHaveBeenCalled();
+});
+
+test('SubRoutine should call the failure handlers if the evaluator function returns false', () => {
+  mockEvaluator.evaluate.mockReturnValue(false);
+  const subRoutine = new SubRoutine(mockEvaluator);
+  subRoutine.catch(mockFailureHandler);
+  subRoutine.execute();
+  expect(mockSuccessHandler).not.toHaveBeenCalled();
+  expect(mockFailureHandler).toHaveBeenCalled();
+});
+
+test('SubRoutine should call the failure handlers if the evaluator function throws an error', () => {
+  mockEvaluator.evaluate.mockImplementation(() => {
+    throw new Error('Evaluator error');
+  });
+  const subRoutine = new SubRoutine(mockEvaluator);
+  subRoutine.catch(mockFailureHandler);
+  subRoutine.execute();
+  expect(mockSuccessHandler).not.toHaveBeenCalled();
+  expect(mockFailureHandler).toHaveBeenCalledWith(new Error('Evaluator error'));
+});
+
+test('setParentRoutine should set the parentRoutine property', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  const parentRoutine = new Routine(mockEvaluator);
+  subRoutine.setParentRoutine(parentRoutine);
+  expect(subRoutine.parentRoutine).toBe(parentRoutine);
+});
+
+test('SubRoutine should throw an error if the constructor is called with a non-Evaluator object', () => {
+  expect(() => new SubRoutine({})).toThrow('`evaluator` must be an instance of `Evaluator`');
+});
+
+test('then should add a success handler to the successHandlers array', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  subRoutine.then(mockSuccessHandler);
+  expect(subRoutine.successHandlers).toEqual([mockSuccessHandler]);
+});
+
+test('then should throw an error if called with a non-function', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  expect(() => subRoutine.then('not a function')).toThrow('`successHandler` must be a function');
+});
+
+test('catch should add a failure handler to the failureHandlers array', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  subRoutine.catch(mockFailureHandler);
+  expect(subRoutine.failureHandlers).toEqual([mockFailureHandler]);
+});
+
+test('catch should throw an error if called with a non-function', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  expect(() => subRoutine.catch('not a function')).toThrow('`failureHandler` must be a function');
+});
+
+test('setParentRoutine should throw an error if called with a non-Routine object', () => {
+  const subRoutine = new SubRoutine(mockEvaluator);
+  expect(() => subRoutine.setParentRoutine({})).toThrow('`routine` must be an instance of `Routine`');
+});
