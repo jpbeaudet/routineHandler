@@ -9,7 +9,7 @@ npm install routinejs
 ```
 
 ## Basic Usage
-To use Routine-Handler, you'll first need to import the Routine and Evaluator classes:
+To use Routinejs, you'll first need to import the Routine and Evaluator classes:
 
 ```
 const { Routine, Evaluator } = require('routinejs');
