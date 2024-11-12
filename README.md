@@ -163,7 +163,42 @@ routine.execute().then((results) => {
   console.error('Routine failed with error:', error);
 });
 ```
-## Exemple is Usage
+# Automating Content Generation and Sentiment Analysis with RoutineJS
+
+## Overview
+This example demonstrates how to automate the process of generating content with GPT-3 and analyzing its sentiment with the Aylien API. The automation is structured into a routine using **RoutineJS**, which chains two AI models to work together: GPT-3 for content generation and Aylien for sentiment analysis. The workflow retries the content generation if the sentiment is negative.
+
+## Explanation
+
+### Routine Setup
+We create a `Routine` instance with two subroutines:
+1. **`generateContent`**: Calls OpenAI’s GPT-3 API to generate content based on a prompt.
+2. **`analyzeSentiment`**: Uses the Aylien Sentiment Analysis API to analyze the sentiment of the generated text.
+
+### Subroutines
+- **`generateContent`**: 
+  - This subroutine sends a request to OpenAI’s GPT-3 API to generate a creative blog post about a given topic (e.g., AI in healthcare).
+  - It returns the generated content.
+
+- **`analyzeSentiment`**: 
+  - This subroutine sends the generated content to the Aylien API to analyze its sentiment.
+  - The sentiment is categorized as **positive**, **neutral**, or **negative**.
+
+### Evaluators
+After generating the content, an evaluator checks the sentiment of the text:
+- If the sentiment is **negative**, the evaluator will return `false`, causing the routine to retry the content generation.
+- If the sentiment is **positive** or **neutral**, the evaluation passes, and the process completes successfully.
+
+### Event Handling
+- If the routine completes successfully, the generated content and its sentiment are logged.
+- Custom events (e.g., `start`, `complete`, `error`) can be handled using `RoutineJS`'s event handling methods.
+
+## Key Notes
+- **API Keys**: Replace `your-openai-api-key` with your actual OpenAI API key, and replace `your-aylien-api-key` and `your-aylien-app-id` with your Aylien credentials.
+- **Retries**: The content generation will retry if the sentiment is negative, based on the evaluator’s logic.
+- **Chaining Models**: The routine allows chaining different AI models in a structured flow, with retry mechanisms and evaluations based on results.
+
+## Example Code
 
 ```
 import Routine from './routinejsv3'; // Assuming you've imported the Routine class
