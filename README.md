@@ -280,6 +280,68 @@ async function runRoutine() {
 runRoutine();
 ```
 
+# Using routinesjs with workers
+
+```
+import Routine from './ModernRoutine.js';
+import Worker from './Worker.js';
+
+// Create the first routine
+const routine1 = new Routine('routine1')
+  .addSubroutine('step1', async () => {
+    console.log('Routine 1: Step 1 executed');
+    return { data: 'Initial data' };
+  });
+
+// Create the second routine
+const routine2 = new Routine('routine2')
+  .addSubroutine('step2', async (initialData) => {
+    console.log('Routine 2: Step 2 executed');
+    return { ...initialData, data: `${initialData.data} + Additional data` };
+  })
+  .addEvaluator('step2', async (result, worker1State) => {
+    console.log('Routine 2: Evaluating result');
+    const worker1Results = worker1State.routine.state.results;
+    const worker1Step1Result = worker1Results.get('step1');
+    return worker1Step1Result.data === 'Initial data';
+  });
+
+// Create the third routine
+const routine3 = new Routine('routine3')
+  .addSubroutine('step3', async (initialData, results, worker1State, worker2State) => {
+    console.log('Routine 3: Step 3 executed');
+    const worker1Results = worker1State.routine.state.results;
+    const worker2Results = worker2State.routine.state.results;
+    const worker1Step1Result = worker1Results.get('step1');
+    const worker2Step2Result = worker2Results.get('step2');
+    return { ...initialData, data: `${worker2Step2Result.data} + Final data` };
+  })
+  .addEvaluator('step3', async (result, worker1State, worker2State) => {
+    console.log('Routine 3: Evaluating result');
+    const worker2Results = worker2State.routine.state.results;
+    const worker2Step2Result = worker2Results.get('step2');
+    return worker2Step2Result.data.includes('Additional data');
+  });
+
+// Create workers with the routines
+const worker1 = new Worker('worker1', routine1);
+const worker2 = new Worker('worker2', routine2);
+const worker3 = new Worker('worker3', routine3);
+
+// Run the workers
+worker1.run()
+  .then(results => console.log('Worker 1 completed:', results))
+  .catch(error => console.error('Worker 1 error:', error));
+
+worker2.run()
+  .then(results => console.log('Worker 2 completed:', results))
+  .catch(error => console.error('Worker 2 error:', error));
+
+worker3.run(null, worker1, worker2)
+  .then(results => console.log('Worker 3 completed:', results))
+  .catch(error => console.error('Worker 3 error:', error));
+```
+
 ## Contributing
 If you'd like to contribute to the project, feel free to open an issue or submit a pull request.
 
