@@ -1,330 +1,144 @@
-// Evaluator Class
-const mockEvaluatorFunction = jest.fn();
+const { expect } = require('chai');
+const Routine = require('../path/to/your/ModernRoutine.js');  // Adjust path to your Routine class
 
-beforeEach(() => {
-  // Reset the mock function before each test
-  mockEvaluatorFunction.mockReset();
-});
+describe('Routine Class - v3', function() {
+  let routine;
 
-test('Evaluator should return the result of the evaluator function', () => {
-  mockEvaluatorFunction.mockReturnValue(true);
-  const evaluator = new Evaluator(mockEvaluatorFunction);
-  expect(evaluator.evaluate()).toBe(true);
-});
-
-test('Evaluator should throw an error if the constructor is called with a non-function', () => {
-  expect(() => new Evaluator('not a function')).toThrow('`evaluatorFunction` must be a function');
-});
-// Routine Class
-const mockEvaluator = {
-  evaluate: jest.fn(),
-};
-
-const mockSuccessHandler = jest.fn();
-const mockFailureHandler = jest.fn();
-
-beforeEach(() => {
-  // Reset the mock functions before each test
-  mockEvaluator.evaluate.mockReset();
-  mockSuccessHandler.mockReset();
-  mockFailureHandler.mockReset();
-});
-
-test('Routine should call the success handlers if the evaluator function returns true', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const routine = new Routine(mockEvaluator);
-  routine.then(mockSuccessHandler);
-  routine.execute();
-  expect(mockSuccessHandler).toHaveBeenCalled();
-  expect(mockFailureHandler).not.toHaveBeenCalled();
-});
-
-test('Routine should call the failure handlers if the evaluator function returns false', () => {
-  mockEvaluator.evaluate.mockReturnValue(false);
-  const routine = new Routine(mockEvaluator);
-  routine.catch(mockFailureHandler);
-  routine.execute();
-  expect(mockSuccessHandler).not.toHaveBeenCalled();
-  expect(mockFailureHandler).toHaveBeenCalled();
-});
-
-test('Routine should call the failure handlers if the evaluator function throws an error', () => {
-  mockEvaluator.evaluate.mockImplementation(() => {
-    throw new Error('Evaluator error');
+  beforeEach(() => {
+    // Set up a fresh Routine instance before each test
+    routine = new Routine('TestRoutine', { maxRetries: 2, retryDelay: 500, timeout: 2000 });
   });
-  const routine = new Routine(mockEvaluator);
-  routine.catch(mockFailureHandler);
-  routine.execute();
-  expect(mockSuccessHandler).not.toHaveBeenCalled();
-  expect(mockFailureHandler).toHaveBeenCalledWith(new Error('Evaluator error'));
-});
 
-test('Routine should call the success handlers of subroutines if the evaluator function returns true', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const routine = new Routine(mockEvaluator);
-  const subRoutine = new SubRoutine({ evaluate: () => true });
-  subRoutine.then(mockSuccessHandler);
-  routine.addSubRoutine(subRoutine);
-  routine.execute();
-  expect(mockSuccessHandler).toHaveBeenCalled();
-  expect(mockFailureHandler).not.toHaveBeenCalled();
-});
+  describe('addSubroutine', function() {
+    it('should add a valid subroutine', function() {
+      const action = async () => 'hello world';
+      const evaluator = (result) => result === 'hello world'; // A simple evaluator
 
-test('Routine should call the failure handlers of subroutines if the evaluator function returns false', () => {
-  mockEvaluator.evaluate.mockReturnValue(false);
-  const routine = new Routine(mockEvaluator);
-  const subRoutine = new SubRoutine({ evaluate: () => false });
-  subRoutine.catch(mockFailureHandler);
-  routine.addSubRoutine(subRoutine);
-  routine.execute();
-  expect(mockSuccessHandler).not.toHaveBeenCalled();
-  expect(mockFailureHandler).toHaveBeenCalled();
-});
+      routine.addSubroutine('generateContent', action, evaluator);
+      
+      expect(routine.subroutines.has('generateContent')).to.be.true;
+      expect(routine.evaluators.has('generateContent')).to.be.true;
+    });
 
-test('Routine should throw an error if the constructor is called with a non-Evaluator object', () => {
-  expect(() => new Routine({})).toThrow('`evaluator` must be an instance of `Evaluator`');
-});
+    it('should throw an error if the action is not a function', function() {
+      const invalidAction = 'not a function';
+      expect(() => routine.addSubroutine('invalidAction', invalidAction))
+        .to.throw('Subroutine invalidAction must be a function');
+    });
 
-test('then should add a success handler to the successHandlers array', () => {
-  const routine = new Routine(mockEvaluator);
-  routine.then(mockSuccessHandler);
-  expect(routine.successHandlers).toEqual([mockSuccessHandler]);
-});
-
-test('then should throw an error if called with a non-function', () => {
-  const routine = new Routine(mockEvaluator);
-  expect(() => routine.then('not a function')).toThrow('`successHandler` must be a function');
-});
-
-test('catch should add a failure handler to the failureHandlers array', () => {
-  const routine = new Routine(mockEvaluator);
-  routine.catch(mockFailureHandler);
-  expect(routine.failureHandlers).toEqual([mockFailureHandler]);
-});
-
-test('catch should throw an error if called with a non-function', () => {
-  const routine = new Routine(mockEvaluator);
-  expect(() => routine.catch('not a function')).toThrow('`failureHandler` must be a function');
-});
-
-test('addSubRoutine should add a routine to the subRoutines array', () => {
-  const routine = new Routine(mockEvaluator);
-  const subRoutine = new SubRoutine(mockEvaluator);
-  routine.addSubRoutine(subRoutine);
-  expect(routine.subRoutines).toEqual([subRoutine]);
-});
-
-test('addSubRoutine should throw an error if called with a non-Routine object', () => {
-  const routine = new Routine(mockEvaluator);
-  expect(() => routine.addSubRoutine({})).toThrow('`routine` must be an instance of `Routine`');
-});
-// Subroutine Class
-const mockEvaluator = {
-  evaluate: jest.fn(),
-};
-
-const mockSuccessHandler = jest.fn();
-const mockFailureHandler = jest.fn();
-
-beforeEach(() => {
-  // Reset the mock functions before each test
-  mockEvaluator.evaluate.mockReset();
-  mockSuccessHandler.mockReset();
-  mockFailureHandler.mockReset();
-});
-
-test('SubRoutine should call the success handlers if the evaluator function returns true', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.then(mockSuccessHandler);
-  subRoutine.execute();
-  expect(mockSuccessHandler).toHaveBeenCalled();
-  expect(mockFailureHandler).not.toHaveBeenCalled();
-});
-
-test('SubRoutine should call the failure handlers if the evaluator function returns false', () => {
-  mockEvaluator.evaluate.mockReturnValue(false);
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.catch(mockFailureHandler);
-  subRoutine.execute();
-  expect(mockSuccessHandler).not.toHaveBeenCalled();
-  expect(mockFailureHandler).toHaveBeenCalled();
-});
-
-test('SubRoutine should call the failure handlers if the evaluator function throws an error', () => {
-  mockEvaluator.evaluate.mockImplementation(() => {
-    throw new Error('Evaluator error');
+    it('should throw an error if evaluator is not a function', function() {
+      const action = async () => 'test';
+      const invalidEvaluator = 'not a function';
+      expect(() => routine.addSubroutine('invalidEvaluator', action, invalidEvaluator))
+        .to.throw('Evaluator for invalidEvaluator must be a function');
+    });
   });
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.catch(mockFailureHandler);
-  subRoutine.execute();
-  expect(mockSuccessHandler).not.toHaveBeenCalled();
-  expect(mockFailureHandler).toHaveBeenCalledWith(new Error('Evaluator error'));
-});
 
-test('setParentRoutine should set the parentRoutine property', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  const parentRoutine = new Routine(mockEvaluator);
-  subRoutine.setParentRoutine(parentRoutine);
-  expect(subRoutine.parentRoutine).toBe(parentRoutine);
-});
+  describe('executeSubroutine', function() {
+    it('should execute a subroutine and return the result', async function() {
+      const action = async () => 'test result';
+      routine.addSubroutine('testSubroutine', action);
 
-test('SubRoutine should throw an error if the constructor is called with a non-Evaluator object', () => {
-  expect(() => new SubRoutine({})).toThrow('`evaluator` must be an instance of `Evaluator`');
-});
+      const result = await routine.executeSubroutine('testSubroutine');
+      expect(result).to.equal('test result');
+    });
 
-test('then should add a success handler to the successHandlers array', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.then(mockSuccessHandler);
-  expect(subRoutine.successHandlers).toEqual([mockSuccessHandler]);
-});
+    it('should retry the subroutine if it fails once', async function() {
+      let attempts = 0;
+      const action = async () => {
+        attempts++;
+        if (attempts === 1) throw new Error('temporary failure');
+        return 'success';
+      };
 
-test('then should throw an error if called with a non-function', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  expect(() => subRoutine.then('not a function')).toThrow('`successHandler` must be a function');
-});
+      routine.addSubroutine('retrySubroutine', action);
+      const result = await routine.executeSubroutine('retrySubroutine');
+      
+      expect(result).to.equal('success');
+      expect(attempts).to.equal(2);  // Should retry once
+    });
 
-test('catch should add a failure handler to the failureHandlers array', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.catch(mockFailureHandler);
-  expect(subRoutine.failureHandlers).toEqual([mockFailureHandler]);
-});
+    it('should fail after exceeding max retries', async function() {
+      const action = async () => {
+        throw new Error('permanent failure');
+      };
 
-test('catch should throw an error if called with a non-function', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  expect(() => subRoutine.catch('not a function')).toThrow('`failureHandler` must be a function');
-});
+      routine.addSubroutine('retryFailSubroutine', action);
+      try {
+        await routine.executeSubroutine('retryFailSubroutine');
+        expect.fail('Should throw error after retries');
+      } catch (error) {
+        expect(error.message).to.equal('Subroutine retryFailSubroutine failed after 2 attempts: permanent failure');
+      }
+    });
 
-test('setParentRoutine should throw an error if called with a non-Routine object', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  expect(() => subRoutine.setParentRoutine({})).toThrow('`routine` must be an instance of `Routine`');
-});
-// Promise Class
-const mockEvaluator = {
-  evaluate: jest.fn(),
-};
+    it('should respect timeout for subroutines', async function() {
+      const action = async () => {
+        await new Promise(resolve => setTimeout(resolve, 3000));  // Simulate long delay
+        return 'delayed result';
+      };
 
-const mockSuccessHandler = jest.fn();
-const mockFailureHandler = jest.fn();
+      routine.addSubroutine('timeoutTest', action);
+      try {
+        await routine.executeSubroutine('timeoutTest');
+        expect.fail('Should timeout before completion');
+      } catch (error) {
+        expect(error.message).to.include('Timeout');
+      }
+    });
+  });
 
-beforeEach(() => {
-  // Reset the mock functions before each test
-  mockEvaluator.evaluate.mockReset();
-  mockSuccessHandler.mockReset();
-  mockFailureHandler.mockReset();
-});
+  describe('execute', function() {
+    it('should execute all subroutines and return results', async function() {
+      const action1 = async () => 'result 1';
+      const action2 = async () => 'result 2';
+      
+      routine.addSubroutine('subroutine1', action1);
+      routine.addSubroutine('subroutine2', action2);
 
-test('Promise should execute all routines in parallel if the queue is set to "parallel"', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const promise = new Promise();
-  const routine1 = new Routine(mockEvaluator);
-  const routine2 = new Routine(mockEvaluator);
-  routine1.then(mockSuccessHandler);
-  routine2.then(mockSuccessHandler);
-  promise.addRoutine(routine1);
-  promise.addRoutine(routine2);
-  promise.addQueue('parallel');
-  promise.execute();
-  expect(mockSuccessHandler).toHaveBeenCalledTimes(2);
-});
+      const results = await routine.execute();
+      expect(results.get('subroutine1')).to.equal('result 1');
+      expect(results.get('subroutine2')).to.equal('result 2');
+    });
 
-test('Promise should execute routines in waterfall mode if the queue is set to "waterfall"', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const promise = new Promise();
-  const routine1 = new Routine(mockEvaluator);
-  const routine2 = new Routine(mockEvaluator);
-  routine1.then(mockSuccessHandler);
-  routine2.then(mockSuccessHandler);
-  promise.addRoutine(routine1);
-  promise.addRoutine(routine2);
-  promise.addQueue('waterfall');
-  promise.execute();
-  expect(mockSuccessHandler).toHaveBeenCalledTimes(2);
-});
+    it('should throw an error if a subroutine fails', async function() {
+      const action = async () => {
+        throw new Error('Subroutine failure');
+      };
+      
+      routine.addSubroutine('failingSubroutine', action);
+      
+      try {
+        await routine.execute();
+        expect.fail('Routine should fail if a subroutine fails');
+      } catch (error) {
+        expect(error.message).to.include('Subroutine failure');
+      }
+    });
 
-test('Promise should throw an error if the queue is set to an invalid value', () => {
-  const promise = new Promise();
-  expect(() => promise.addQueue('invalid')).toThrow('Invalid queue type: invalid');
-});
+    it('should emit events during execution', function(done) {
+      const action = async () => 'event test result';
+      routine.addSubroutine('eventTestSubroutine', action);
+      
+      routine.on('complete', (data) => {
+        expect(data.results.get('eventTestSubroutine')).to.equal('event test result');
+        done();
+      });
+      
+      routine.execute();
+    });
+  });
 
-test('addRoutine should add a routine to the routines array', () => {
-  const promise = new Promise();
-  const routine = new Routine(mockEvaluator);
-  promise.addRoutine(routine);
-  expect(promise.routines).toEqual([routine]);
-});
-
-test('addRoutine should throw an error if called with a non-Routine object', () => {
-  const promise = new Promise();
-  expect(() => promise.addRoutine({})).toThrow('`routine` must be an instance of `Routine`');
-});
-// Additional Tests
-
-test('then should return the Routine object, allowing for chaining', () => {
-  const routine = new Routine({ evaluate: () => true });
-  expect(routine.then(mockSuccessHandler)).toBe(routine);
-});
-
-test('catch should return the Routine object, allowing for chaining', () => {
-  const routine = new Routine({ evaluate: () => false });
-  expect(routine.catch(mockFailureHandler)).toBe(routine);
-});
-
-test('addSubRoutine should return the Routine object, allowing for chaining', () => {
-  const routine = new Routine({ evaluate: () => true });
-  const subRoutine = new SubRoutine({ evaluate: () => true });
-  expect(routine.addSubRoutine(subRoutine)).toBe(routine);
-});
-// Additional tests
-
-// Routine Class
-
-test('execute should call the execute method of added subroutines, even if the evaluator function returns true', () => {
-  mockEvaluator.evaluate.mockReturnValue(true);
-  const routine = new Routine(mockEvaluator);
-  const subRoutine = new SubRoutine({ evaluate: () => true });
-  const spy = jest.spyOn(subRoutine, 'execute');
-  routine.addSubRoutine(subRoutine);
-  routine.execute();
-  expect(spy).toHaveBeenCalled();
-});
-
-test('addSubRoutine should throw an error if called with a non-Routine object', () => {
-  const routine = new Routine(mockEvaluator);
-  expect(() => routine.addSubRoutine({})).toThrow('`routine` must be an instance of `Routine`');
-});
-
-// SubRoutine Class
-
-test('then should add a success handler to the successHandlers array', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.then(mockSuccessHandler);
-  expect(subRoutine.successHandlers).toEqual([mockSuccessHandler]);
-});
-
-test('catch should add a failure handler to the failureHandlers array', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  subRoutine.catch(mockFailureHandler);
-  expect(subRoutine.failureHandlers).toEqual([mockFailureHandler]);
-});
-
-test('then should throw an error if called with a non-function', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  expect(() => subRoutine.then('not a function')).toThrow('`successHandler` must be a function');
-});
-
-test('catch should throw an error if called with a non-function', () => {
-  const subRoutine = new SubRoutine(mockEvaluator);
-  expect(() => subRoutine.catch('not a function')).toThrow('`failureHandler` must be a function');
-});
-// Promise Class
-test('addRoutine should throw an error if called with a non-Routine object', () => {
-const promise = new Promise();
-expect(() => promise.addRoutine({})).toThrow('routine must be an instance of Routine');
-});
-
-test('addQueue should set the queue type to parallel if called with parallel', () => {
-const promise = new Promise();
-promise.addQueue('parallel');
-expect(promise.queue).toBe('parallel');
+  describe('reset', function() {
+    it('should reset the routine state', function() {
+      routine.addSubroutine('someSubroutine', async () => 'reset test');
+      
+      routine.execute();
+      routine.reset();
+      
+      const state = routine.getState();
+      expect(state.isRunning).to.be.false;
+      expect(state.results.size).to.equal(0);
+    });
+  });
 });
