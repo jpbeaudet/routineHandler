@@ -1,0 +1,182 @@
+// ModernRoutine.js
+class Routine {
+  constructor(name, options = {}) {
+    this.name = name;
+    this.subroutines = new Map();
+    this.evaluators = new Map();
+    this.state = {
+      isRunning: false,
+      lastRun: null,
+      currentSubroutine: null,
+      error: null,
+      results: new Map()
+    };
+    this.options = {
+      maxRetries: options.maxRetries || 3,
+      retryDelay: options.retryDelay || 1000,
+      timeout: options.timeout || 30000,
+      ...options
+    };
+    this.eventEmitter = new EventTarget();
+  }
+
+  // Add a subroutine with its evaluator
+  addSubroutine(name, action, evaluator = null) {
+    if (typeof action !== 'function') {
+      throw new Error(`Subroutine ${name} must be a function`);
+    }
+
+    this.subroutines.set(name, async (...args) => {
+      try {
+        const result = await Promise.race([
+          action(...args),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), this.options.timeout)
+          )
+        ]);
+        
+        this.state.results.set(name, result);
+        this.emit('subroutineComplete', { name, result });
+        return result;
+      } catch (error) {
+        this.emit('subroutineError', { name, error });
+        throw error;
+      }
+    });
+
+    if (evaluator) {
+      this.addEvaluator(name, evaluator);
+    }
+
+    return this;
+  }
+
+  // Add an evaluator for a subroutine
+  addEvaluator(name, evaluator) {
+    if (typeof evaluator !== 'function') {
+      throw new Error(`Evaluator for ${name} must be a function`);
+    }
+
+    this.evaluators.set(name, async (result) => {
+      try {
+        const evaluation = await evaluator(result);
+        this.emit('evaluation', { name, evaluation });
+        return evaluation;
+      } catch (error) {
+        this.emit('evaluatorError', { name, error });
+        throw error;
+      }
+    });
+
+    return this;
+  }
+
+  // Execute a specific subroutine with retry logic
+  async executeSubroutine(name, ...args) {
+    if (!this.subroutines.has(name)) {
+      throw new Error(`Subroutine ${name} not found`);
+    }
+
+    const subroutine = this.subroutines.get(name);
+    let attempts = 0;
+    let lastError;
+
+    while (attempts < this.options.maxRetries) {
+      try {
+        this.state.currentSubroutine = name;
+        const result = await subroutine(...args);
+        
+        if (this.evaluators.has(name)) {
+          const evaluator = this.evaluators.get(name);
+          const evaluation = await evaluator(result);
+          
+          if (!evaluation) {
+            throw new Error(`Evaluation failed for ${name}`);
+          }
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+        attempts++;
+        
+        if (attempts < this.options.maxRetries) {
+          await new Promise(resolve => 
+            setTimeout(resolve, this.options.retryDelay * attempts)
+          );
+        }
+      }
+    }
+
+    throw new Error(`Subroutine ${name} failed after ${attempts} attempts: ${lastError.message}`);
+  }
+
+  // Execute the entire routine
+  async execute(initialData = {}) {
+    if (this.state.isRunning) {
+      throw new Error('Routine is already running');
+    }
+
+    try {
+      this.state.isRunning = true;
+      this.state.lastRun = new Date();
+      this.state.error = null;
+      this.emit('start', { timestamp: this.state.lastRun });
+
+      const results = new Map();
+      
+      for (const [name] of this.subroutines) {
+        const result = await this.executeSubroutine(name, initialData, results);
+        results.set(name, result);
+      }
+
+      this.state.results = results;
+      this.emit('complete', { results });
+      return results;
+    } catch (error) {
+      this.state.error = error;
+      this.emit('error', { error });
+      throw error;
+    } finally {
+      this.state.isRunning = false;
+      this.state.currentSubroutine = null;
+    }
+  }
+
+  // Event handling methods
+  on(eventName, callback) {
+    this.eventEmitter.addEventListener(eventName, (event) => {
+      callback(event.detail);
+    });
+    return this;
+  }
+
+  emit(eventName, detail) {
+    const event = new CustomEvent(eventName, { detail });
+    this.eventEmitter.dispatchEvent(event);
+  }
+
+  // Get the current state of the routine
+  getState() {
+    return {
+      ...this.state,
+      subroutineCount: this.subroutines.size,
+      evaluatorCount: this.evaluators.size
+    };
+  }
+
+  // Reset the routine state
+  reset() {
+    this.state = {
+      isRunning: false,
+      lastRun: null,
+      currentSubroutine: null,
+      error: null,
+      results: new Map()
+    };
+    this.emit('reset');
+    return this;
+  }
+}
+
+export default Routine;
