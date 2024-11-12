@@ -163,6 +163,87 @@ routine.execute().then((results) => {
   console.error('Routine failed with error:', error);
 });
 ```
+## Exemple is Usage
+
+```
+import Routine from './routinejsv3'; // Assuming you've imported the Routine class
+
+// Define the GPT-3 and Aylien API endpoints
+const OPENAI_API_KEY = 'your-openai-api-key';
+const AYLIEN_API_KEY = 'your-aylien-api-key';
+
+// Function to call GPT-3 for content generation
+async function generateContent() {
+  const response = await fetch('https://api.openai.com/v1/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'text-davinci-003',
+      prompt: 'Generate a creative blog post about AI in healthcare.',
+      max_tokens: 150,
+    }),
+  });
+
+  const data = await response.json();
+  return data.choices[0].text.trim();
+}
+
+// Function to call Aylien Sentiment Analysis API
+async function analyzeSentiment(text) {
+  const response = await fetch('https://api.aylien.com/api/v1/sentiment', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-AYLIEN-TextAPI-Application-Key': AYLIEN_API_KEY,
+      'X-AYLIEN-TextAPI-Application-ID': 'your-aylien-app-id', // replace with your Aylien app ID
+    },
+    body: JSON.stringify({ text }),
+  });
+
+  const data = await response.json();
+  return data.polarity; // returns 'positive', 'neutral', or 'negative'
+}
+
+// Create the routine instance
+const routine = new Routine('ContentGenerationRoutine', { maxRetries: 3, timeout: 30000 });
+
+// Add subroutine for generating content
+routine.addSubroutine('generateContent', generateContent);
+
+// Add evaluator for sentiment analysis
+routine.addSubroutine('analyzeSentiment', analyzeSentiment);
+
+// Add evaluation logic for sentiment (positive is good, negative should trigger re-run)
+routine.addEvaluator('analyzeSentiment', async (sentiment) => {
+  if (sentiment === 'negative') {
+    console.log('Sentiment was negative. Regenerating content...');
+    return false; // Failed evaluation; we will retry content generation
+  } else {
+    return true; // Sentiment is acceptable
+  }
+});
+
+// Execute the routine
+async function runRoutine() {
+  try {
+    const result = await routine.execute();
+    const generatedContent = result.get('generateContent');
+    const sentiment = result.get('analyzeSentiment');
+
+    if (sentiment === 'positive' || sentiment === 'neutral') {
+      console.log('Generated Content:', generatedContent);
+      console.log('Sentiment:', sentiment);
+    }
+  } catch (error) {
+    console.error('Error executing routine:', error);
+  }
+}
+
+runRoutine();
+```
 
 ## Contributing
 If you'd like to contribute to the project, feel free to open an issue or submit a pull request.
