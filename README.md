@@ -1,206 +1,174 @@
-# Routinejs
-Routinejs is a JavaScript library for organizing and executing tasks, or "routines," in a specific order. It allows you to attach success and failure handlers to routines, and to specify the conditions for determining whether a routine was successful or failed using evaluators. You can also create subroutines that are linked to a parent routine, and execute routines in parallel or in a waterfall queue.
+# Routine.js v3
+
+Routine.js v3 is a modern and flexible JavaScript library for managing and executing routines with subroutines, evaluators, retry logic, and event-driven workflows. It allows you to define, execute, and evaluate tasks (subroutines) in a controlled and reliable manner, with support for retries, timeouts, and event-based interactions.
+
+## Features
+
+- **Subroutines:** Define functions that can be executed as part of a routine.
+- **Evaluators:** Attach evaluators to subroutines to evaluate results.
+- **Retry Logic:** Automatically retry failed subroutines up to a maximum number of retries.
+- **Timeouts:** Set timeouts for subroutines to prevent long-running operations.
+- **Event Handling:** Easily subscribe to routine events like `start`, `complete`, `error`, and more.
+- **State Management:** Track the state of a routine including current subroutine, error, and results.
+- **Customizable Options:** Control retry delay, timeout, and maximum retries.
 
 ## Installation
-To install Routinejs, run the following command:
 
-```
+You can install `routinejs` via npm or yarn:
+
+```bash
 npm install routinejs
-```
+or
 
-## Basic Usage
-To use Routinejs, you'll first need to import the Routine and Evaluator classes:
+bash
+Copy code
+yarn add routinejs
+Usage
+Basic Setup
+To start using Routine.js, simply import and create a new routine instance:
 
-```
-const { Routine, Evaluator } = require('routinejs');
-```
+javascript
+Copy code
+import Routine from 'routinejs';
 
-Next, create an instance of the Evaluator class by passing in a function that returns a boolean value indicating whether the routine was successful or not:
-
-```
-const evaluator = new Evaluator(() => {
-  // Perform some task and return true if successful, false if not
-  return taskWasSuccessful;
+const routine = new Routine('MyRoutine', {
+  maxRetries: 5,
+  retryDelay: 1000,
+  timeout: 5000
 });
-```
+Adding Subroutines
+Add a subroutine by specifying a name, action (function), and optionally an evaluator:
 
-Then, create an instance of the Routine class by passing in the evaluator you just created:
+javascript
+Copy code
+routine.addSubroutine('subroutine1', async () => {
+  // Your subroutine logic here
+  return 'Result from subroutine1';
+}, async (result) => {
+  // Optional: Evaluator for subroutine1
+  console.log(`Evaluating: ${result}`);
+  return result === 'Result from subroutine1'; // Return true or false
+});
+Executing a Routine
+To execute the routine and its subroutines:
 
-```
-const routine = new Routine(evaluator);
+javascript
+Copy code
+routine.execute().then((results) => {
+  console.log('Routine completed with results:', results);
+}).catch((error) => {
+  console.error('Routine failed with error:', error);
+});
+Event Handling
+You can subscribe to various events during the routine execution:
 
-```
-
-You can now attach success and failure handlers to the routine using the then and catch methods:
-
-```
-routine.then(() => {
-  console.log('Routine was successful');
+javascript
+Copy code
+routine.on('start', (data) => {
+  console.log('Routine started at:', data.timestamp);
 });
 
-routine.catch(() => {
-  console.log('Routine failed');
+routine.on('complete', (data) => {
+  console.log('Routine completed with results:', data.results);
 });
 
-```
+routine.on('error', (data) => {
+  console.error('Routine error:', data.error);
+});
+State Management
+You can access the current state of the routine:
 
-To execute the routine, simply call the execute method:
+javascript
+Copy code
+const state = routine.getState();
+console.log(state);
+Resetting a Routine
+Reset the state of the routine to start fresh:
 
-```
-routine.execute();
+javascript
+Copy code
+routine.reset();
+API
+Routine(name, options)
+name: The name of the routine.
+options: Optional configuration object. Available options:
+maxRetries: Maximum number of retries for subroutines (default: 3).
+retryDelay: Delay between retries in milliseconds (default: 1000).
+timeout: Timeout for each subroutine in milliseconds (default: 30000).
+addSubroutine(name, action, evaluator)
+name: The name of the subroutine.
+action: The function representing the subroutine logic.
+evaluator: Optional function to evaluate the result of the subroutine.
+addEvaluator(name, evaluator)
+name: The name of the subroutine to attach the evaluator to.
+evaluator: The evaluation function.
+executeSubroutine(name, ...args)
+Executes a specific subroutine with retry logic.
 
-```
-### Evaluators
-Evaluators allow you to specify the conditions for determining whether a routine was successful or failed. You can create an evaluator by extending the Evaluator class and defining your own evaluate method:
+name: The name of the subroutine.
+args: The arguments passed to the subroutine.
+execute(initialData)
+Executes the entire routine with optional initial data.
 
-```
-class MyEvaluator extends Evaluator {
-  evaluate() {
-    // Perform some task and return true if successful, false if not
-    return taskWasSuccessful;
+initialData: Optional data passed to the subroutines at the beginning.
+on(eventName, callback)
+Listens to routine events such as start, complete, error, and custom events.
+
+eventName: The name of the event to listen for.
+callback: The callback function to execute when the event is emitted.
+getState()
+Returns the current state of the routine, including subroutine count, evaluator count, and more.
+
+reset()
+Resets the routine state.
+
+Example
+Here’s an example of defining a routine with subroutines and evaluators:
+
+javascript
+Copy code
+import Routine from 'routinejs';
+
+const routine = new Routine('MyRoutine', {
+  maxRetries: 3,
+  retryDelay: 1000,
+  timeout: 5000
+});
+
+routine.addSubroutine('fetchData', async () => {
+  // Simulate fetching data
+  return { success: true, data: [1, 2, 3] };
+}, async (result) => {
+  if (result.success) {
+    return result.data;
   }
-}
-
-```
-
-You can then use this evaluator when creating a routine:
-
-```
-const evaluator = new MyEvaluator();
-const routine = new Routine(evaluator);
-
-```
-
-### Creating a Subroutine
-Subroutines are routines that are linked to a parent routine. When the parent routine is successful, the subroutines will be executed in the order they were added. To create a subroutine, you can use the SubRoutine class, which extends the Routine class:
-
-```
-const subRoutine = new SubRoutine(evaluator);
-
-```
-
-To link the subroutine to a parent routine, you can use the setParentRoutine method:
-
-```
-subRoutine.setParentRoutine(routine);
-
-```
-
-You can then add the subroutine to the parent routine using the addSubRoutine method:
-
-```
-routine.addSubRoutine(subRoutine);
-
-```
-
-### Creating a Promise
-Promises allow you to execute multiple routines in parallel or in a waterfall queue. To create a promise, you can use the Promise class:
-
-```
-const promise = new Promise();
-
-```
-
-You can add routines to the promise using the addRoutine method:
-
-```
-promise.addRoutine(routine1);
-promise.addRoutine(routine2);
-
-```
-
-By default, routines are executed in parallel. If you want to execute routines in a waterfall queue, you can use the addQueue method:
-
-```
-promise.addQueue('waterfall');
-```
-
-You can attach success and failure handlers to the promise using the then and catch methods:
-
-```
-promise.then(() => {
-  console.log('All routines were successful');
+  throw new Error('Data fetch failed');
 });
 
-promise.catch(() => {
-  console.log('At least one routine failed');
+routine.addSubroutine('processData', async (data) => {
+  // Simulate processing data
+  return data.map(item => item * 2);
 });
 
-```
-
-To execute the promise, simply call the execute method:
-
-```
-promise.execute();
-
-```
-
-### Examples
-Here are some examples showing how to use Routine-Handler:
-
-#### Using Evaluators with a Routine
-
-```
-const { Routine } = require('routinejs');
-
-const evaluator = new Evaluator(() => {
-  // Perform some task and return true if successful, false if not
-  return taskWasSuccessful;
+routine.execute().then((results) => {
+  console.log('Routine completed with results:', results);
+}).catch((error) => {
+  console.error('Routine failed with error:', error);
 });
+Contributing
+If you'd like to contribute to the project, feel free to open an issue or submit a pull request.
 
-const routine = new Routine(evaluator);
+License
+This project is licensed under the MIT License.
 
-routine.then(() => {
-  console.log('Routine was successful');
-}).catch(() => {
-  console.log('Routine failed');
-}).evaluate(() => {
-  // Perform some task and return true if successful, false if not
-  return taskWasSuccessful;
-}, () => {
-  console.log('Routine was successful according to the evaluator');
-}).evaluate(() => {
-  // Perform some task and return true if successful, false if not
-  return !taskWasSuccessful;
-}, () => {
-  console.log('Routine failed according to the evaluator');
-});
+For more information, please refer to the documentation.
 
-routine.execute();
+vbnet
+Copy code
+
+This README covers installation, usage, API references, and basic examples of how to use the `Routine.js v3` library, including new features like retry logic, timeouts, and event handling.
 
 
-```
 
-#### Using Evaluators with a Promise
 
-```
-const { Promise } = require('routinejs');
 
-const evaluator1 = new Evaluator(() => {
-  // Perform some task and return true if successful, false if not
-  return task1WasSuccessful;
-});
-
-const evaluator2 = new Evaluator(() => {
-  // Perform some task and return true if successful, false if not
-  return task2WasSuccessful;
-});
-
-const routine1 = new Routine(evaluator1);
-const routine2 = new Routine(evaluator2);
-
-const promise = new Promise();
-promise
-  .addRoutine(routine1)
-  .addRoutine(routine2)
-  .addQueue('parallel');
-
-promise.then(() => {
-  console.log('All routines were successful');
-}).catch(() => {
-  console.log('At least one routine failed');
-});
-
-promise.execute();
-
-```
