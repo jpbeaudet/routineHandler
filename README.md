@@ -416,6 +416,50 @@ worker3.run(null, worker1, worker2)
   .then(results => console.log('Worker 3 completed:', results))
   .catch(error => console.error('Worker 3 error:', error));
 ```
+## Exemple 2 Event driven
+
+```
+import Routine from './ModernRoutine.js';
+import Worker from './Worker.js';
+
+// Create the first routine
+const routine1 = new Routine('routine1')
+  .addSubroutine('step1', async () => {
+    console.log('Routine 1: Step 1 executed');
+    return { data: 'Initial data' };
+  });
+
+// Create the second routine
+const routine2 = new Routine('routine2')
+  .addSubroutine('step2', async (initialData, results, worker1State) => {
+    console.log('Routine 2: Step 2 executed');
+    const worker1Result = worker1State.routine.state.results.get('step1');
+    return { ...initialData, data: `${worker1Result.data} + Additional data` };
+  })
+  .addEvaluator('step2', async (result) => {
+    console.log('Routine 2: Evaluating result');
+    return result.data.includes('Initial data');
+  });
+
+// Create workers with the routines
+const worker1 = new Worker('worker1', routine1);
+const worker2 = new Worker('worker2', routine2);
+
+// Listen for worker1 complete event
+worker2.on('worker1Complete', (worker1State) => {
+  worker2.run(null, worker1State)
+    .then(results => console.log('Worker 2 completed:', results))
+    .catch(error => console.error('Worker 2 error:', error));
+});
+
+// Run worker1
+worker1.run()
+  .then(results => {
+    console.log('Worker 1 completed:', results);
+    worker1.emit('worker1Complete', worker1.getState());
+  })
+  .catch(error => console.error('Worker 1 error:', error));
+```
 
 ## Contributing
 If you'd like to contribute to the project, feel free to open an issue or submit a pull request.
