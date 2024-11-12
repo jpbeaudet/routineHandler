@@ -280,7 +280,7 @@ async function runRoutine() {
 runRoutine();
 ```
 
-# Using routinesjs with workers
+## Using routinesjs with workers
 
 ```
 import Routine from './ModernRoutine.js';
@@ -335,6 +335,81 @@ worker1.run()
 
 worker2.run()
   .then(results => console.log('Worker 2 completed:', results))
+  .catch(error => console.error('Worker 2 error:', error));
+
+worker3.run(null, worker1, worker2)
+  .then(results => console.log('Worker 3 completed:', results))
+  .catch(error => console.error('Worker 3 error:', error));
+```
+
+## Event driven usage of routinejs and workers
+
+```
+import Routine from './ModernRoutine.js';
+import Worker from './Worker.js';
+
+// Create the first routine
+const routine1 = new Routine('routine1')
+  .addSubroutine('step1', async () => {
+    console.log('Routine 1: Step 1 executed');
+    return { data: 'Initial data' };
+  });
+
+// Create the second routine
+const routine2 = new Routine('routine2')
+  .addSubroutine('step2', async (initialData, results, worker1Event) => {
+    console.log('Routine 2: Step 2 executed');
+    const worker1Result = await new Promise((resolve) => {
+      worker1Event.addEventListener('worker1Complete', (event) => {
+        resolve(event.detail.result);
+      });
+    });
+    return { ...initialData, data: `${worker1Result.data} + Additional data` };
+  })
+  .addEvaluator('step2', async (result) => {
+    console.log('Routine 2: Evaluating result');
+    return result.data.includes('Initial data');
+  });
+
+// Create the third routine
+const routine3 = new Routine('routine3')
+  .addSubroutine('step3', async (initialData, results, worker1Event, worker2Event) => {
+    console.log('Routine 3: Step 3 executed');
+    const worker1Result = await new Promise((resolve) => {
+      worker1Event.addEventListener('worker1Complete', (event) => {
+        resolve(event.detail.result);
+      });
+    });
+    const worker2Result = await new Promise((resolve) => {
+      worker2Event.addEventListener('worker2Complete', (event) => {
+        resolve(event.detail.result);
+      });
+    });
+    return { ...initialData, data: `${worker2Result.data} + Final data` };
+  })
+  .addEvaluator('step3', async (result) => {
+    console.log('Routine 3: Evaluating result');
+    return result.data.includes('Additional data');
+  });
+
+// Create workers with the routines
+const worker1 = new Worker('worker1', routine1);
+const worker2 = new Worker('worker2', routine2);
+const worker3 = new Worker('worker3', routine3);
+
+// Run the workers
+worker1.run()
+  .then(results => {
+    console.log('Worker 1 completed:', results);
+    worker1.emit('worker1Complete', { result: results });
+  })
+  .catch(error => console.error('Worker 1 error:', error));
+
+worker2.run(null, worker1)
+  .then(results => {
+    console.log('Worker 2 completed:', results);
+    worker2.emit('worker2Complete', { result: results });
+  })
   .catch(error => console.error('Worker 2 error:', error));
 
 worker3.run(null, worker1, worker2)
